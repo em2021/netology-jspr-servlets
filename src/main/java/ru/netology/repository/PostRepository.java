@@ -2,24 +2,56 @@ package ru.netology.repository;
 
 import ru.netology.model.Post;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
-// Stub
 public class PostRepository {
-  public List<Post> all() {
-    return Collections.emptyList();
-  }
 
-  public Optional<Post> getById(long id) {
-    return Optional.empty();
-  }
+    private final ConcurrentHashMap<Long, String> repo = new ConcurrentHashMap<>();
+    private final AtomicLong idCount = new AtomicLong();
 
-  public Post save(Post post) {
-    return post;
-  }
+    public List<Post> all() {
+        if (repo.size() > 0) {
+            List<Post> posts = new ArrayList<>();
+            repo.entrySet().stream().iterator().forEachRemaining(s -> posts.add(new Post(s.getKey(), s.getValue())));
+            return posts;
+        }
+        return Collections.emptyList();
+    }
 
-  public void removeById(long id) {
-  }
+    public Optional<Post> getById(long id) {
+        String content = repo.get(id);
+        if (content != null) {
+            return Optional.of(new Post(id, content));
+        }
+        return Optional.empty();
+    }
+
+    public Post save(Post post) {
+        long id = post.getId();
+        String content = post.getContent();
+        long setId = -1;
+        if (id == 0) {
+            repo.put(setId = idCount.incrementAndGet(), content);
+        }
+        if (id != 0) {
+            if (repo.containsKey(id)) {
+                repo.put(id, content);
+            } else {
+                repo.putIfAbsent(id, content);
+            }
+        }
+        if (setId > 0) {
+            return getById(setId).get();
+        }
+        return post;
+    }
+
+    public void removeById(long id) {
+        repo.remove(id);
+    }
 }
